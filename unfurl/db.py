@@ -17,6 +17,7 @@ class Snapshot(BaseModel):
     created = DateTimeField(default=datetime.datetime.now)
     data = BlobField()
     checksum = CharField()
+    regex = CharField()
 
     @classmethod
     def last(cls, url=None, offset=None):
@@ -33,9 +34,11 @@ class Snapshot(BaseModel):
         return query.first()
 
     def object(self):
-        snap = PageSnapshot(url=self.url)
-        snap.links = snap.unblob(self.data)
-        return snap
+        return PageSnapshot(
+          url=self.url, 
+          regex=self.regex,
+          links=PageSnapshot.unblob(self.data),
+        )
 
 class Database(object):
     def __init__(self, db=None):
@@ -59,6 +62,7 @@ class Database(object):
     def add_snapshot(self, snapshot):
         return Snapshot(
           url=snapshot.url,
-          data=snapshot.blob(),
-          checksum=snapshot.checksum(),
+          data=snapshot.blob,
+          checksum=snapshot.checksum,
+          regex = snapshot.regex,
         ).save()

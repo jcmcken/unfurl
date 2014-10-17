@@ -8,8 +8,6 @@ import os
 
 LOG = logging.getLogger(__name__)
 
-RE_SOMETHING = re.compile('.+')
-
 def get_page(url):
     LOG.debug('fetching page: %s' % url)
     page = requests.get(url)
@@ -17,8 +15,15 @@ def get_page(url):
     return page
 
 class Page(object):
-    def __init__(self, url):
+    def __init__(self, url, regex=None, autoload=False):
         self.url = self._normalize_url(url)
+        self._request = None
+        self.regex = regex or '.+'
+
+        if autoload:
+            self.load()
+
+    def load(self):
         self._request = get_page(self.url)
 
     def _normalize_url(self, url):
@@ -33,7 +38,10 @@ class Page(object):
         if not self.markup:
             return None
 
-        return [ i['href'] for i in BeautifulSoup(self.markup).findAll('a', href=RE_SOMETHING) ] 
+        regex = re.compile(self.regex)
+
+        return [ i['href'] for i in \
+            BeautifulSoup(self.markup).findAll('a', href=regex) ] 
 
     @property
     def snapshot(self, regex='.*'):
@@ -44,16 +52,22 @@ class Page(object):
             * The list of links
             * A crytographic hash representing the data
         """
-        return PageSnapshot(self.url, self.links)
+        return PageSnapshot(self.url, self.links, self.regex)
 
 class PageSnapshot(object):
     DEFAULT_HASH_FUNCTION = hashlib.sha512
+    DEFAULT_HASH_ENCODING = 'hex'
 
-    def __init__(self, url=None, links=[]):
+    def __init__(self, url=None, links=[], regex=None, hasher=None,
+      encoding=None):
         self.url = url
         self.links = links
+        self.regex = regex
+        self.hasher = hasher or self.DEFAULT_HASH_FUNCTION
+        self.encoding = encoding or self.DEFAULT_HASH_ENCODING
         self.links.sort()
 
+    @property
     def blob(self):
         """
         Create a unique representation of the link data
@@ -61,9 +75,10 @@ class PageSnapshot(object):
         self.links.sort()
         return '\x00'.join(self.links)
 
-    def unblob(self, blob):
+    @classmethod
+    def unblob(cls, blob):
         return str(blob).split('\x00')
 
-    def checksum(self, hasher=None, encode='hex'):
-        hash_func = hasher or self.DEFAULT_HASH_FUNCTION
-        return hash_func(self.blob()).digest().encode(encode)
+    @property
+    def checksum(self):
+        return self.hasher(self.blob).digest().encode(self.encoding)
