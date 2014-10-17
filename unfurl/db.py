@@ -2,11 +2,11 @@ from peewee import (
   SqliteDatabase, Model, CharField, IntegerField, DateTimeField,
   BlobField,
 )
-from unfurl.config import DATABASE
+from unfurl.config import CONFIG
 from unfurl.page import PageSnapshot
 import datetime
 
-_database = SqliteDatabase(DATABASE)
+_database = SqliteDatabase(CONFIG.get('global', 'database'))
 
 class BaseModel(Model):
     class Meta:
