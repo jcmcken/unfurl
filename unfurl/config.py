@@ -8,6 +8,8 @@ LOG = logging.getLogger(__name__)
 def fullpath(filename):
     return os.path.realpath(os.path.expanduser(filename))
 
+DEBUG_MODE = os.environ.get('UNFURL_DEBUG', 'false').lower() == 'true'
+
 DEFAULT_CONFIG_FILE = '/etc/unfurl.cfg'
 DEFAULT_USER_DIR = fullpath('~/.unfurl')
 DEFAULT_USER_CONFIG_FILE = os.path.join(DEFAULT_USER_DIR, 'config')
