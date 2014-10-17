@@ -40,9 +40,18 @@ class Snapshot(BaseModel):
           links=PageSnapshot.unblob(self.data),
         )
 
+    @classmethod
+    def exact(cls, snapshot):
+        return cls.select().where(
+          (cls.url == snapshot.url) & 
+          (cls.checksum == snapshot.checksum) &
+          (cls.regex == snapshot.regex)
+        ).first()
+
 class Database(object):
     def __init__(self, db=None):
         self._cursor = db or _database
+        self.initialize()
 
     @property
     def location(self):

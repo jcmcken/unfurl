@@ -67,6 +67,11 @@ class PageSnapshot(object):
         self.encoding = encoding or self.DEFAULT_HASH_ENCODING
         self.links.sort()
 
+    def __eq__(self, other):
+        return other.url == self.url and \
+               other.regex == self.regex and \
+               other.checksum == self.checksum
+
     @property
     def blob(self):
         """
