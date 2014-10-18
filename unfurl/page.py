@@ -5,12 +5,17 @@ from bs4 import BeautifulSoup
 import hashlib
 import sqlite3
 import os
+from unfurl.util import timeit
 
 LOG = logging.getLogger(__name__)
 
 def get_page(url):
     LOG.debug('fetching page: %s' % url)
-    page = requests.get(url)
+    try:
+        page = requests.get(url)
+    except requests.exceptions.MissingSchema, e:
+        LOG.error(e.args[0])
+        return None
     LOG.debug('response headers: %s' % page.headers)
     return page
 
@@ -23,8 +28,13 @@ class Page(object):
         if autoload:
             self.load()
 
+    @timeit('page load')
     def load(self):
         self._request = get_page(self.url)
+
+    @property
+    def loaded(self):
+        return self._request is not None
 
     def _normalize_url(self, url):
         return url.rstrip('/')
