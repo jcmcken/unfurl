@@ -7,7 +7,7 @@ from unfurl.page import PageSnapshot
 import datetime
 import sqlite3
 
-_database = SqliteDatabase(CONFIG.get('global', 'database'))
+_database = SqliteDatabase(CONFIG.get('global', 'database'), threadlocals=True)
 
 class BaseModel(Model):
     class Meta:

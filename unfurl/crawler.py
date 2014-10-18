@@ -2,14 +2,52 @@ import logging
 import time
 import re
 from unfurl import Database, Snapshot
+from Queue import Queue
+from threading import Thread
 
 LOG = logging.getLogger(__name__)
 
+class Executor(object):
+    def __init__(self, callable, threaded=True, max_threads=10):
+        LOG.info('max threads: %s' % max_threads)
+        LOG.info('threaded mode enabled? %s' % threaded)
+        self._callable = callable
+        self._queue = Queue(max_threads)
+        self.threaded = threaded
+
+    def _worker(self):
+        while True:
+            item = self._queue.get()
+            self._callable(item)
+            self._queue.task_done()
+
+    def _work_threaded(self, items):
+        for item in items:
+            t = Thread(target=self._worker)
+            t.daemon = True
+            t.start()
+
+        for item in items:
+            self._queue.put(item)
+
+        self._queue.join()
+
+    def _work_unthreaded(self, items):
+        for item in items:
+            self._callable(item)
+
+    def work_on(self, items):
+        if self.threaded:
+            self._work_threaded(items)
+        else:
+            self._work_unthreaded(items)
+
 class Crawler(object):
-    def __init__(self, period=3600, db=None, count=-1):
+    def __init__(self, period=3600, db=None, count=-1, threaded=True, max_threads=5):
         self.period = period
         self.count = count
         self.db = db or Database()
+        self.executor = Executor(self.crawl_page, threaded=threaded, max_threads=max_threads)
 
         LOG.debug('crawler period: %d' % self.period)
         LOG.debug('crawler count: %d' % self.count)
@@ -38,8 +76,7 @@ class Crawler(object):
 
         while True:
             start = time.time()
-            for page in pages:
-                self.crawl_page(page)
+            self.executor.work_on(pages)
 
             elapsed += 1
 
