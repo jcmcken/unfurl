@@ -68,14 +68,21 @@ class Executor(object):
 
 class Crawler(object):
     def __init__(self, period=3600, db=None, count=-1, threaded=True, max_threads=5):
+        # this this is likely a long-running process, set a better log level
+        self._setup_logging()
+
         self.period = period
         self.count = count
         self.db = db or Database()
         self.executor = Executor(self.crawl_page, threaded=threaded, max_threads=max_threads)
 
-        LOG.debug('crawler period: %d' % self.period)
-        LOG.debug('crawler count: %d' % self.count)
-        LOG.debug('crawler db: %s' % self.db.location)
+        LOG.info('crawler period: %d' % self.period)
+        LOG.info('crawler count: %d' % self.count)
+        LOG.info('crawler db: %s' % self.db.location)
+
+    def _setup_logging(self):
+        if LOG.level == logging.NOTSET or LOG.level > logging.INFO:
+            LOG.setLevel(logging.INFO)
 
     def crawl_page(self, page):
         LOG.debug('crawling %s' % page.url)
@@ -92,7 +99,7 @@ class Crawler(object):
             LOG.debug("identical snapshot already exists in database, skipping")
 
     def crawl(self, pages):
-        LOG.debug('starting crawl loop')
+        LOG.info('starting crawl loop over %d pages' % len(pages))
         elapsed = 0
 
         if self.count == 0:
@@ -111,7 +118,7 @@ class Crawler(object):
             if elapsed == self.count:
                 break
 
-            LOG.debug('round %d took %.3f seconds total' % \
+            LOG.info('round %d took %.3f seconds total' % \
                 (elapsed, (time.time() - start)))
             
             self.sleep()
@@ -119,5 +126,5 @@ class Crawler(object):
         self.executor.shutdown()
 
     def sleep(self):
-        LOG.debug('sleeping for %d seconds' % self.period)
+        LOG.info('sleeping for %d seconds' % self.period)
         time.sleep(self.period)
