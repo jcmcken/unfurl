@@ -2,6 +2,7 @@ import optparse
 import logging
 import sys
 from unfurl import Crawler, Page
+from unfurl.config import CONFIG, ConfigurationError
 import sqlite3
 
 LOG = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ def get_crawl_cli():
     cli = optparse.OptionParser(prog='unfurl crawl')
     cli.add_option('-p', '--period', type=int, default=3600,
       help='Time in seconds between crawls. Defaults to 1hr')
-    cli.add_option('-t', '--times', type=int, default=-1,
+    cli.add_option('-t', '--count', type=int, default=-1,
       help='Crawl a specified number of times (defaults to forever)')
     return cli
 
@@ -36,6 +37,13 @@ def main_main(argv):
 def main_diff(argv):
     pass
 
+def load_config(cli, config=None):
+    config = config or CONFIG
+    try:
+        config.load()
+    except ConfigurationError, e:
+        cli.error('problem understanding configuration: ' + e.exception.args[0])        
+
 def main_crawl(argv):
     cli = get_crawl_cli()
     opts, args = cli.parse_args(argv)
@@ -43,10 +51,14 @@ def main_crawl(argv):
     if args:
         LOG.debug('command-line set to crawl pages: %s' % ', '.join(args))
 
-    if opts.period < 0:
-        cli.error('must pass a positive period')
+    load_config(cli)
 
-    crawler = Crawler(period=opts.period, count=opts.times)
+    crawler = Crawler(
+      period=CONFIG.get('crawler', 'period'),
+      count=CONFIG.get('crawler', 'count'),
+      threaded=CONFIG.get('crawler', 'threaded'),
+      max_threads=CONFIG.get('crawler', 'max_threads')
+    )
     pages = [ Page(i) for i in args ]
     crawler.crawl(pages)
 
