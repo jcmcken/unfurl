@@ -7,7 +7,7 @@ from unfurl.page import PageSnapshot
 import datetime
 import sqlite3
 
-_database = SqliteDatabase(CONFIG.get('global', 'database'), threadlocals=True)
+_database = SqliteDatabase(None, threadlocals=True)
 
 class BaseModel(Model):
     class Meta:
@@ -51,7 +51,8 @@ class Snapshot(BaseModel):
 
 class Database(object):
     def __init__(self, db=None):
-        self._cursor = db or _database
+        self._location = db or CONFIG.get('global', 'database')
+        self._cursor = _database
         self.initialize()
 
     @property
@@ -59,6 +60,7 @@ class Database(object):
         return self._cursor.database
 
     def initialize(self):
+        self._cursor.init(self._location)
         try:
             self.create_tables()
         except sqlite3.OperationalError, e:
