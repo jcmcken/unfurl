@@ -75,26 +75,42 @@ class Configuration(object):
     defaults = {
       'global': {
         'database': DATABASE,
+        'log_level': 'INFO',
       },
       'crawler': {
-        'period': 3600,
+        'count': '-1',
+        'period': '3600',
+        'max_threads': '5',
+        'threaded': 'true',
       },
     }
 
-    def __init__(self, filename):
+    def __init__(self, filename=None, autoload=False):
         self.filename = filename
         self._conf = ConfigParser.RawConfigParser(self.defaults)
         self._set_defaults()
-        self.load()
+        self._loaded = False
+
+        if autoload:
+            self.load()
+
+    @property
+    def loaded(self):
+        return self._loaded
 
     def load(self):
         self._conf.read(self.filename)
         try:
             self._pre_convert_validate()
-            self._convert()
+            self._type_conversion()
             self._post_convert_validate()
         except Exception, e:
             raise ConfigurationError(e)
+        self._loaded = True
+
+    def ensure_loaded(self):
+        if not self.loaded:
+            self.load()
 
     def _set_defaults(self):
         for section, section_data in self.defaults.iteritems():
@@ -103,16 +119,24 @@ class Configuration(object):
             except ConfigParser.DuplicateSectionError:
                 pass
             for key, val in section_data.iteritems():
-                self.set(section, key, val)
+                self._set(section, key, val)
 
-    def get(self, section, key, default=None):
+    def _get(self, section, key, default=None):
         try:
             return self._conf.get(section, key)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             return default
 
-    def set(self, section, key, value):
+    def get(self, section, key, default=None):
+        self.ensure_loaded()
+        return self._get(section, key, default)
+
+    def _set(self, section, key, value):
         self._conf.set(section, key, value)
+
+    def set(self, section, key, value):
+        self.ensure_loaded()
+        self._set(section, key, value)
 
     def _pre_convert_validate(self):
         """
@@ -124,23 +148,40 @@ class Configuration(object):
         """
         Validate the semantic correctness of configuration options
         """
-        db = self.get('global', 'database')
+        db = self._get('global', 'database')
         if db != MEMORY_DATABASE:
             db_dir = os.path.dirname(db)
             if not os.path.isdir(db_dir):
                 raise OSError(errno.EEXIST, 
                   'database directory "%s" does not exist' % db_dir)
 
-    def convert(self, section, key, callable):
-        self.set(section, key, callable(self.get(section, key)))
+    def _convert(self, section, key, callable, getter=None, setter=None):
+        getter = getter or self._get
+        setter = setter or self._set
+        converted = callable(getter(section, key))
+        LOG.debug('interpreted %s:%s == %s' % (section, key, converted))
+        setter(section, key, converted)
 
-    def _convert(self):
+    def convert(self, section, key, callable):
+        self._convert(section, key, callable, getter=self.get,
+            setter=self.set)
+
+    def _boolean(self, item):
+        return item.lower().strip() == 'true'
+
+    def _log_level(self, item):
+        level = getattr(logging, item.upper(), 'INFO')
+
+    def _type_conversion(self):
         """
         Convert raw string configurations into appropriate types
         """
-        self.convert('crawler', 'period', int)
-        db = self.get('global', 'database')
+        self._convert('crawler', 'period', int)
+        self._convert('crawler', 'count', int)
+        self._convert('crawler', 'max_threads', int)
+        self._convert('crawler', 'threaded', self._boolean)
+        db = self._get('global', 'database')
         if db != MEMORY_DATABASE:
-            self.convert('global', 'database', fullpath)
+            self._convert('global', 'database', fullpath)
 
 CONFIG = Configuration(CONFIG_FILE)
