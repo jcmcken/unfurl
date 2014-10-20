@@ -92,8 +92,8 @@ class PageSnapshot(object):
 
     @classmethod
     def unblob(cls, blob):
-        return str(blob).split('\x00')
+        return blob.encode('utf-8').split('\x00')
 
     @property
     def checksum(self):
-        return self.hasher(self.blob).digest().encode(self.encoding)
+        return self.hasher(self.blob).hexdigest()
