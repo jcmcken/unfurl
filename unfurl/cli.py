@@ -77,9 +77,9 @@ def main_diff(argv):
 
     cli.load_environment()
 
-    diff = Snapshot.diff(args[0], old_offset=opts.old, new_offset=opts.new)
-
-    sys.stdout.write(diff)
+    for url in args:
+        diff = Snapshot.diff(url, old_offset=opts.old, new_offset=opts.new)
+        sys.stdout.write(diff)
 
 def main_crawl(argv):
     cli = get_crawl_cli()
