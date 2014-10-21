@@ -73,7 +73,8 @@ class Database(object):
         for table in [Snapshot]:
             self._cursor.create_table(table)
 
-    def add_snapshot(self, snapshot):
+    @classmethod
+    def add_snapshot(cls, snapshot):
         return Snapshot(
           url=snapshot.url,
           data=snapshot.blob,

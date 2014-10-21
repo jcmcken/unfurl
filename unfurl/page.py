@@ -50,8 +50,13 @@ class Page(object):
 
         regex = re.compile(self.regex)
 
-        return [ i['href'] for i in \
+        items = [ i['href'] for i in \
             BeautifulSoup(self.markup).findAll('a', href=regex) ] 
+
+        result = list(set(items))
+        result.sort()
+
+        return result
 
     @property
     def snapshot(self, regex='.*'):
@@ -92,7 +97,7 @@ class PageSnapshot(object):
 
     @classmethod
     def unblob(cls, blob):
-        return blob.encode('utf-8').split('\x00')
+        return unicode(blob).encode('utf-8').split('\x00')
 
     @property
     def checksum(self):
