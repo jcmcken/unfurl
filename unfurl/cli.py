@@ -2,7 +2,7 @@ import optparse
 import logging
 import sys
 from unfurl import Crawler, Page, Snapshot, Database
-from unfurl.config import CONFIG, ConfigurationError
+from unfurl.config import DEFAULT_CONFIG, CONFIG, ConfigurationError
 import sqlite3
 
 LOG = logging.getLogger(__name__)
@@ -43,10 +43,14 @@ def get_cli():
 def get_crawl_cli():
     cli = UnfurlOptionParser(prog='unfurl crawl',
         usage='unfurl crawl <url> [url, url, ...] [options]')
-    cli.add_option('-p', '--period', type=int, default=3600,
-      help='Time in seconds between crawls. Defaults to 1hr')
-    cli.add_option('-t', '--count', type=int, default=-1,
+    cli.add_option('-p', '--period', type=int, 
+      help='Time in seconds between crawls (defaults to 1 hour)')
+    cli.add_option('-c', '--count', type=int,
       help='Crawl a specified number of times (defaults to forever)')
+    cli.add_option('-m', '--max-threads', type=int,
+      help='Maximum number of threads to use for crawling')
+    cli.add_option('--threading', action='store_true',
+      help='Whether to enable multi-threaded mode (defaults to false)')
     return cli
 
 def get_diff_cli():
@@ -87,10 +91,10 @@ def main_crawl(argv):
     cli.load_environment()
 
     crawler = Crawler(
-      period=CONFIG.get('crawler', 'period'),
-      count=CONFIG.get('crawler', 'count'),
-      threaded=CONFIG.get('crawler', 'threaded'),
-      max_threads=CONFIG.get('crawler', 'max_threads')
+      period=CONFIG.prefer(opts.period, 'crawler', 'period'),
+      count=CONFIG.prefer(opts.count, 'crawler', 'count'),
+      threaded=CONFIG.prefer(opts.threading, 'crawler', 'threaded'),
+      max_threads=CONFIG.prefer(opts.max_threads, 'crawler', 'max_threads')
     )
     pages = [ Page(i) for i in args ]
     crawler.crawl(pages)

@@ -81,7 +81,7 @@ class Configuration(object):
         'count': '-1',
         'period': '3600',
         'max_threads': '5',
-        'threaded': 'true',
+        'threaded': 'false',
       },
     }
 
@@ -184,6 +184,15 @@ class Configuration(object):
         db = self._get('global', 'database')
         if db != MEMORY_DATABASE:
             self._convert('global', 'database', fullpath)
+
+    def prefer(self, preference, section, key):
+        """
+        The 'reverse' of get. Use ``preference`` if it's not ``None``,
+        otherwise get item from config file.
+        """
+        if preference is not None:
+            return preference
+        return self.get(section, key)
 
 DEFAULT_CONFIG = Configuration(autoload=True)
 CONFIG = Configuration(CONFIG_FILE)
