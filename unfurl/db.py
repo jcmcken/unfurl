@@ -5,6 +5,7 @@ from peewee import (
 from unfurl.config import CONFIG
 from unfurl.page import PageSnapshot
 import datetime
+import difflib
 import sqlite3
 
 _database = SqliteDatabase(None, threadlocals=True)
@@ -48,6 +49,40 @@ class Snapshot(BaseModel):
           (cls.checksum == snapshot.checksum) &
           (cls.regex == snapshot.regex)
         ).first()
+
+    @classmethod
+    def last_two(cls, url, old_offset=1, new_offset=0):
+        new_snap = Snapshot.last(url, new_offset)
+        old_snap = Snapshot.last(url, old_offset)
+
+        if not (new_snap or old_snap):
+            raise NoSuchRecord(url)
+
+        if not old_snap:
+            old_snap = new_snap
+
+        return old_snap, new_snap
+
+    @classmethod
+    def diff(cls, url, old_offset=1, new_offset=0):
+        old_snap, new_snap = Snapshot.last_two(
+            url, old_offset=old_offset, new_offset=new_offset)
+
+        new = new_snap.object()
+        new_links = new.links
+        to_date = new_snap.created
+
+        if not old_snap:
+            old_links = new_links
+            from_date = to_date
+        else:
+            old = old_snap.object()
+            old_links = old.links
+            from_date = old_snap.created
+
+        items = list(difflib.unified_diff(old_links, new_links, lineterm='',
+            fromfiledate=from_date, tofiledate=to_date))  
+        return '\n'.join(items) + '\n'
 
 class NoSuchRecord(RuntimeError): pass
 

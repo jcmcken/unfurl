@@ -1,12 +1,29 @@
 import optparse
 import logging
 import sys
-from unfurl import Crawler, Page
+from unfurl import Crawler, Page, Snapshot, Database
 from unfurl.config import CONFIG, ConfigurationError
-from unfurl.show import Differ
 import sqlite3
 
 LOG = logging.getLogger(__name__)
+
+class UnfurlOptionParser(optparse.OptionParser):
+    def load_database(self):
+        try:
+            return Database()
+        except Exception, e:
+            self.error(e.args[0])
+    
+    def load_config(self, config=None):
+        config = config or CONFIG
+        try:
+            config.load()
+        except ConfigurationError, e:
+            self.error('problem understanding configuration: ' + e.exception.args[0])        
+
+    def load_environment(self):
+        self.load_config()
+        self.load_database()
 
 def error(message):
     sys.stderr.write(' unfurl: error: %s\n' % message)
@@ -16,7 +33,7 @@ def abort(message):
     raise SystemExit(1)
 
 def get_cli():
-    cli = optparse.OptionParser(prog='unfurl',
+    cli = UnfurlOptionParser(prog='unfurl',
       usage='unfurl <subcommand> [arguments] [options]',
       epilog='Valid subcommands: %s' % ', '.join(COMMANDS.keys()))
     cli.add_option('--debug', action='store_true',
@@ -24,7 +41,7 @@ def get_cli():
     return cli
 
 def get_crawl_cli():
-    cli = optparse.OptionParser(prog='unfurl crawl',
+    cli = UnfurlOptionParser(prog='unfurl crawl',
         usage='unfurl crawl <url> [url, url, ...] [options]')
     cli.add_option('-p', '--period', type=int, default=3600,
       help='Time in seconds between crawls. Defaults to 1hr')
@@ -33,7 +50,7 @@ def get_crawl_cli():
     return cli
 
 def get_diff_cli():
-    cli = optparse.OptionParser(prog='unfurl diff',
+    cli = UnfurlOptionParser(prog='unfurl diff',
         usage='unfurl diff <url> [url, url, ...] [options]')
     cli.add_option('-o', '--old', type=int, default=1,
       help='Offset of the "old" snapshot (0 is latest, 1 is next oldest, etc.)'
@@ -54,21 +71,11 @@ def main_diff(argv):
     if len(args) < 1:
         cli.error('requires at least one URL')
 
-    load_config(cli)
+    cli.load_environment()
 
-    differ = Differ()
-
-    diff = differ.diff(args[0], old_offset=opts.old, new_offset=opts.new)
+    diff = Snapshot.diff(args[0], old_offset=opts.old, new_offset=opts.new)
 
     sys.stdout.write(diff)
-    
-
-def load_config(cli, config=None):
-    config = config or CONFIG
-    try:
-        config.load()
-    except ConfigurationError, e:
-        cli.error('problem understanding configuration: ' + e.exception.args[0])        
 
 def main_crawl(argv):
     cli = get_crawl_cli()
@@ -77,7 +84,7 @@ def main_crawl(argv):
     if args:
         LOG.debug('command-line set to crawl pages: %s' % ', '.join(args))
 
-    load_config(cli)
+    cli.load_environment()
 
     crawler = Crawler(
       period=CONFIG.get('crawler', 'period'),
