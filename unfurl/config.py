@@ -99,7 +99,8 @@ class Configuration(object):
         return self._loaded
 
     def load(self):
-        self._conf.read(self.filename)
+        if self.filename:
+            self._conf.read(self.filename)
         try:
             self._pre_convert_validate()
             self._type_conversion()
@@ -184,4 +185,5 @@ class Configuration(object):
         if db != MEMORY_DATABASE:
             self._convert('global', 'database', fullpath)
 
+DEFAULT_CONFIG = Configuration(autoload=True)
 CONFIG = Configuration(CONFIG_FILE)
