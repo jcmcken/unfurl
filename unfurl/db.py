@@ -81,7 +81,8 @@ class Snapshot(BaseModel):
             from_date = old_snap.created
 
         items = list(difflib.unified_diff(old_links, new_links, lineterm='',
-            fromfiledate=from_date, tofiledate=to_date))  
+            fromfiledate=from_date, tofiledate=to_date, 
+            tofile=new.url, fromfile=new.url))  
         return '\n'.join(items) + '\n'
 
 class NoSuchRecord(RuntimeError): pass
