@@ -49,6 +49,8 @@ class Snapshot(BaseModel):
           (cls.regex == snapshot.regex)
         ).first()
 
+class NoSuchRecord(RuntimeError): pass
+
 class Database(object):
     def __init__(self, db=None):
         self._location = db or CONFIG.get('global', 'database')

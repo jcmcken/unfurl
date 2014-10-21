@@ -3,6 +3,7 @@ import logging
 import sys
 from unfurl import Crawler, Page
 from unfurl.config import CONFIG, ConfigurationError
+from unfurl.show import Differ
 import sqlite3
 
 LOG = logging.getLogger(__name__)
@@ -23,11 +24,23 @@ def get_cli():
     return cli
 
 def get_crawl_cli():
-    cli = optparse.OptionParser(prog='unfurl crawl')
+    cli = optparse.OptionParser(prog='unfurl crawl',
+        usage='unfurl crawl <url> [url, url, ...] [options]')
     cli.add_option('-p', '--period', type=int, default=3600,
       help='Time in seconds between crawls. Defaults to 1hr')
     cli.add_option('-t', '--count', type=int, default=-1,
       help='Crawl a specified number of times (defaults to forever)')
+    return cli
+
+def get_diff_cli():
+    cli = optparse.OptionParser(prog='unfurl diff',
+        usage='unfurl diff <url> [url, url, ...] [options]')
+    cli.add_option('-o', '--old', type=int, default=1,
+      help='Offset of the "old" snapshot (0 is latest, 1 is next oldest, etc.)'
+           ' Defaults to 1.')
+    cli.add_option('-n', '--new', type=int, default=0,
+      help='Offset of the "old" snapshot (0 is latest, 1 is next oldest, etc.)'
+           ' Defaults to 0.')
     return cli
 
 def main_main(argv):
@@ -35,7 +48,20 @@ def main_main(argv):
     opts, args = cli.parse_args(['-h'])
 
 def main_diff(argv):
-    pass
+    cli = get_diff_cli()
+    opts, args = cli.parse_args(argv)
+
+    if len(args) < 1:
+        cli.error('requires at least one URL')
+
+    load_config(cli)
+
+    differ = Differ()
+
+    diff = differ.diff(args[0], old_offset=opts.old, new_offset=opts.new)
+
+    sys.stdout.write(diff)
+    
 
 def load_config(cli, config=None):
     config = config or CONFIG
