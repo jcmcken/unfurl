@@ -115,10 +115,7 @@ class Configuration(object):
 
     def _set_defaults(self):
         for section, section_data in self.defaults.iteritems():
-            try:
-                self._conf.add_section(section)
-            except ConfigParser.DuplicateSectionError:
-                pass
+            self._add_section(section)
             for key, val in section_data.iteritems():
                 self._set(section, key, val)
 
@@ -177,6 +174,8 @@ class Configuration(object):
         """
         Convert raw string configurations into appropriate types
         """
+        self._convert_sections()
+        self._convert_page_sections()
         self._convert('crawler', 'period', int)
         self._convert('crawler', 'count', int)
         self._convert('crawler', 'max_threads', int)
@@ -193,6 +192,38 @@ class Configuration(object):
         if preference is not None:
             return preference
         return self.get(section, key)
+
+    def _sections(self):
+        return self._conf.sections()
+
+    def _page_sections(self):
+        return [ i for i in self._sections() if i.strip().startswith('http') ]
+
+    def _add_section(self, name):
+        try:
+            self._conf.add_section(name)
+        except ConfigParser.DuplicateSectionError:
+            pass
+
+    def _move_section(self, old, new):
+        if old == new:
+            return
+
+        self._add_section(new)
+        for option in self._conf._sections.get(old): # self._conf.options is broken?!?
+            self._set(new, option, self._get(old, option))
+        self._conf._sections[new]['__name__'] = new
+        self._conf.remove_section(old)
+
+    def _convert_sections(self):
+        # get rid of extraneous spacing in section names
+        for section in self._sections():
+            self._move_section(section, section.strip())
+
+    def _convert_page_sections(self):
+        for section in self._page_sections():
+            if not self._get(section, 'url'):
+                self._set(section, 'url', section)
 
 DEFAULT_CONFIG = Configuration(autoload=True)
 CONFIG = Configuration(CONFIG_FILE)
