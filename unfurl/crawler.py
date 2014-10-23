@@ -67,7 +67,10 @@ class Executor(object):
         return [ t for t in self._worker_threads if t.isAlive() ]
 
 class Crawler(object):
-    def __init__(self, period=3600, db=None, count=-1, threaded=True, max_threads=5):
+    def __init__(self, period=3600, db=None, count=-1, threaded=True, max_threads=5,
+      log_level=None):
+        self.log_level = log_level
+
         # this this is likely a long-running process, set a better log level
         self._setup_logging()
 
@@ -81,8 +84,11 @@ class Crawler(object):
         LOG.info('crawler db: %s' % self.db.location)
 
     def _setup_logging(self):
-        if LOG.level == logging.NOTSET or LOG.level > logging.INFO:
-            LOG.setLevel(logging.INFO)
+        if self.log_level is not None:
+            LOG.setLevel(self.log_level)
+        else:
+            if LOG.level == logging.NOTSET or LOG.level > logging.INFO:
+                LOG.setLevel(logging.INFO)
 
     def crawl_page(self, page):
         LOG.debug('crawling %s' % page.url)

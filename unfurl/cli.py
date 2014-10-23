@@ -72,6 +72,11 @@ def get_dump_cli():
            ' Defaults to 0 (latest).')
     return cli
 
+def get_snap_cli():
+    cli = UnfurlOptionParser(prog='unfurl snap',
+        usage='unfurl snap <url> [options]')
+    return cli
+
 def main_main(argv):
     cli = get_cli()
     opts, args = cli.parse_args(['-h'])
@@ -108,7 +113,16 @@ def main_crawl(argv):
     crawler.crawl(pages)
 
 def main_snap(argv):
-    pass
+    cli = get_snap_cli()
+    opts, args = cli.parse_args(argv)
+
+    if not args:
+        cli.error('requires a url')
+
+    cli.load_environment()
+
+    crawler = Crawler(period=0, count=1, threaded=False, log_level=logging.NOTSET)
+    crawler.crawl([ Page(args[0]) ])
 
 def main_dump(argv):
     cli = get_dump_cli()
