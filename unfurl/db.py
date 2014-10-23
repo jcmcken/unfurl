@@ -7,6 +7,12 @@ from unfurl.page import PageSnapshot
 import datetime
 import difflib
 import sqlite3
+import sys
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
 
 _database = SqliteDatabase(None, threadlocals=True)
 
@@ -23,16 +29,7 @@ class Snapshot(BaseModel):
 
     @classmethod
     def last(cls, url=None, offset=None):
-        query = cls.select()
-
-        if url:
-            query = query.where(cls.url == url)
-        
-        query = query.order_by(cls.created.desc())
-
-        if offset:
-            query = query.limit(1).offset(offset)
-
+        query = cls.filter_attr(url=url, offset=offset)
         return query.first()
 
     def object(self):
@@ -85,6 +82,33 @@ class Snapshot(BaseModel):
             tofile=new.url, fromfile=new.url))  
         return '\n'.join(items) + '\n'
 
+    @classmethod
+    def filter_attr(cls, url=None, offset=None):
+        query = cls.select()
+        
+        if url:
+            query = query.where(cls.url == url)
+
+        query = query.order_by(cls.created.desc())
+
+        if offset:
+            query = query.limit(1).offset(offset)
+
+        return query
+
+    @classmethod
+    def dump(cls, url=None, offset=0, fd=None):
+        fd = fd or sys.stdout
+        snap = cls.filter_attr(url=url, offset=offset).first()
+
+        if not snap:
+            return False
+
+        json.dump(snap.object().json(), fd, indent=2)
+        sys.stdout.write('\n')
+
+        return True
+         
 class NoSuchRecord(RuntimeError): pass
 
 class Database(object):

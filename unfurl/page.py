@@ -102,3 +102,11 @@ class PageSnapshot(object):
     @property
     def checksum(self):
         return self.hasher(self.blob).hexdigest()
+
+    def json(self):
+        return {
+          'url': self.url,
+          'links': self.links,
+          'regex': self.regex,
+          'checksum': self.checksum,
+        }

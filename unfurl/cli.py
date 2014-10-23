@@ -64,6 +64,14 @@ def get_diff_cli():
            ' Defaults to 0.')
     return cli
 
+def get_dump_cli():
+    cli = UnfurlOptionParser(prog='unfurl dump',
+        usage='unfurl dump <url> [options]')
+    cli.add_option('-o', '--offset', type=int, default=1,
+      help='Offset of the snapshot to dump (0 is latest, 1 is next oldest, etc.)'
+           ' Defaults to 0 (latest).')
+    return cli
+
 def main_main(argv):
     cli = get_cli()
     opts, args = cli.parse_args(['-h'])
@@ -102,14 +110,25 @@ def main_crawl(argv):
 def main_snap(argv):
     pass
 
-def main_show(argv):
-    pass
+def main_dump(argv):
+    cli = get_dump_cli()
+    opts, args = cli.parse_args(argv)
+
+    if not args:
+        cli.error('requires a url')
+
+    cli.load_environment()
+
+    success = Snapshot.dump(url=args[0])
+
+    if not success:
+        abort('no snapshots for that url')
 
 COMMANDS = {
   'diff': main_diff,
   'crawl': main_crawl,
   'snap': main_snap,
-  'show': main_show,
+  'dump': main_dump,
 }
 
 def main(argv=None):
