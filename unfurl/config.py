@@ -225,5 +225,9 @@ class Configuration(object):
             if not self._get(section, 'url'):
                 self._set(section, 'url', section)
 
+    @property
+    def pages(self):
+        return self._page_sections()
+
 DEFAULT_CONFIG = Configuration(autoload=True)
 CONFIG = Configuration(CONFIG_FILE)

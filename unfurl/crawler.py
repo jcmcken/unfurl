@@ -99,7 +99,7 @@ class Crawler(object):
             LOG.debug("identical snapshot already exists in database, skipping")
 
     def crawl(self, pages):
-        LOG.info('starting crawl loop over %d pages' % len(pages))
+        LOG.info('starting crawl loop over %d page(s)' % len(pages))
         elapsed = 0
 
         if self.count == 0:

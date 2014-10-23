@@ -55,7 +55,7 @@ def get_crawl_cli():
 
 def get_diff_cli():
     cli = UnfurlOptionParser(prog='unfurl diff',
-        usage='unfurl diff <url> [url, url, ...] [options]')
+        usage='unfurl diff <url> [options]')
     cli.add_option('-o', '--old', type=int, default=1,
       help='Offset of the "old" snapshot (0 is latest, 1 is next oldest, etc.)'
            ' Defaults to 1.')
@@ -81,13 +81,12 @@ def main_diff(argv):
     opts, args = cli.parse_args(argv)
 
     if len(args) < 1:
-        cli.error('requires at least one URL')
+        cli.error('requires a url')
 
     cli.load_environment()
 
-    for url in args:
-        diff = Snapshot.diff(url, old_offset=opts.old, new_offset=opts.new)
-        sys.stdout.write(diff)
+    diff = Snapshot.diff(args[0], old_offset=opts.old, new_offset=opts.new)
+    sys.stdout.write(diff)
 
 def main_crawl(argv):
     cli = get_crawl_cli()
@@ -104,7 +103,8 @@ def main_crawl(argv):
       threaded=CONFIG.prefer(opts.threading, 'crawler', 'threaded'),
       max_threads=CONFIG.prefer(opts.max_threads, 'crawler', 'max_threads')
     )
-    pages = [ Page(i) for i in args ]
+    pages = list(set(args + CONFIG.pages))
+    pages = [ Page(i) for i in pages ]
     crawler.crawl(pages)
 
 def main_snap(argv):
